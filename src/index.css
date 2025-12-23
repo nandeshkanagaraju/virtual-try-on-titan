@@ -1,0 +1,25 @@
+/* src/index.css */
+@import "tailwindcss";
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  /* Ensure the app can grow as long as the content */
+  height: auto !important; 
+  min-height: 100% !important;
+  /* Fix the white gap on the right (w-screen causes this, w-full fixes it) */
+  width: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* Custom Lean Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}

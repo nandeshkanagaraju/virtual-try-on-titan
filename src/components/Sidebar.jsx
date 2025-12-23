@@ -26,6 +26,10 @@ export default function JewelryShowcase() {
     useEffect(() => {
         const saved = JSON.parse(localStorage.getItem('taneria_wishlist') || '[]');
         setWishlist(saved);
+
+        // Load Persisted Generated Results
+        const savedResults = JSON.parse(localStorage.getItem('taneria_wishlist_results') || '{}');
+        setGeneratedResults(savedResults);
     }, []);
 
     // TRIGGERS WHEN FILTER MODE OR BASE IMAGE CHANGES
@@ -105,7 +109,11 @@ export default function JewelryShowcase() {
                 const url = await performVirtualTryOn(baseImage, item, apiKey);
 
                 // Update Success State
-                setGeneratedResults(prev => ({ ...prev, [item.id]: url }));
+                setGeneratedResults(prev => {
+                    const next = { ...prev, [item.id]: url };
+                    localStorage.setItem('taneria_wishlist_results', JSON.stringify(next));
+                    return next;
+                });
                 setGenerationStatus(prev => ({ ...prev, [item.id]: 'success' }));
 
             } catch (err) {
@@ -121,7 +129,11 @@ export default function JewelryShowcase() {
         setGenerationStatus(prev => ({ ...prev, [item.id]: 'pending' }));
         try {
             const url = await performVirtualTryOn(baseImage, item, apiKey);
-            setGeneratedResults(prev => ({ ...prev, [item.id]: url }));
+            setGeneratedResults(prev => {
+                const next = { ...prev, [item.id]: url };
+                localStorage.setItem('taneria_wishlist_results', JSON.stringify(next));
+                return next;
+            });
             setGenerationStatus(prev => ({ ...prev, [item.id]: 'success' }));
         } catch (err) {
             setGenerationStatus(prev => ({ ...prev, [item.id]: 'error' }));
@@ -179,8 +191,8 @@ export default function JewelryShowcase() {
                                 key={btn.id}
                                 onClick={() => setFilterMode(btn.id)}
                                 className={`text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${filterMode === btn.id
-                                        ? 'bg-black text-white shadow-lg'
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-black'
+                                    ? 'bg-black text-white shadow-lg'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-black'
                                     }`}
                             >
                                 {btn.label}

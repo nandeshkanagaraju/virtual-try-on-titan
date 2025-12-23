@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ArrowRight, HeartOff, Sparkles, Loader2, Download, LayoutGrid, Camera, User, X } from 'lucide-react';
+import { Trash2, ArrowRight, HeartOff, Sparkles, Loader2, Download, LayoutGrid, Camera, User, X, RotateCcw, Maximize2 } from 'lucide-react';
 import { JEWELRY_CATALOG } from '../data/catalog';
 import { performVirtualTryOn } from '../services/runwayService.js';
 import AIModal from '../components/AIModal';
@@ -25,10 +25,14 @@ export default function WishlistPage() {
         const savedIds = JSON.parse(localStorage.getItem('taneria_wishlist') || '[]');
         const items = JEWELRY_CATALOG.filter(item => savedIds.includes(item.id));
         setWishlistItems(items);
-        
+
         // Load Portrait from local storage
         const savedImg = localStorage.getItem('user_portrait');
         if (savedImg) setBaseImage(savedImg);
+
+        // Load Persisted Results
+        const savedResults = JSON.parse(localStorage.getItem('taneria_wishlist_results') || '{}');
+        setBulkResults(savedResults);
     }, []);
 
     const handleImageUpload = (e) => {
@@ -78,17 +82,42 @@ export default function WishlistPage() {
             });
             await Promise.all(promises);
             setBulkResults(newResults);
+            localStorage.setItem('taneria_wishlist_results', JSON.stringify(newResults));
         } finally {
             setIsProcessingAll(false);
         }
     };
 
+    const handleRegenerate = async (item) => {
+        if (!baseImage) return;
+
+        setProgress(prev => ({ ...prev, [item.id]: 'loading' }));
+
+        // Clear existing result temporarily to show loading state if desired, 
+        // or just keep showing it with a loading spinner overlay.
+        // Let's keep showing it but overlay spinner.
+
+        try {
+            const url = await performVirtualTryOn(baseImage, item, apiKey);
+            const newResults = { ...bulkResults, [item.id]: url };
+            setBulkResults(newResults);
+            localStorage.setItem('taneria_wishlist_results', JSON.stringify(newResults));
+            setProgress(prev => ({ ...prev, [item.id]: 'done' }));
+        } catch (err) {
+            setProgress(prev => ({ ...prev, [item.id]: 'error' }));
+            alert("Generation failed. Please try again.");
+        }
+    };
+
+    // Image Preview Modal State
+    const [previewImage, setPreviewImage] = useState(null);
+
     return (
         <div className="min-h-screen bg-[#FDFDFF] font-['Inter',sans-serif] text-slate-900 pb-20 overflow-x-hidden">
             <Header />
-            
+
             <main className="max-w-5xl mx-auto px-8 py-16">
-                
+
                 {/* 1. STUDIO IDENTITY SECTION (The Upload Option) */}
                 <section className="mb-16 bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
                     <div className="flex items-center gap-6">
@@ -107,7 +136,7 @@ export default function WishlistPage() {
 
                     <div className="flex gap-3">
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                        <button 
+                        <button
                             onClick={() => fileInputRef.current.click()}
                             className="bg-black text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg"
                         >
@@ -129,7 +158,7 @@ export default function WishlistPage() {
                     </div>
 
                     {wishlistItems.length > 0 && (
-                        <button 
+                        <button
                             onClick={generateAllLooks}
                             disabled={isProcessingAll}
                             className={`flex items-center gap-3 px-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl transition-all
@@ -146,7 +175,7 @@ export default function WishlistPage() {
                 {wishlistItems.length > 0 ? (
                     <div className="space-y-6">
                         {wishlistItems.map((item) => (
-                            <motion.div 
+                            <motion.div
                                 key={item.id} layout
                                 className="bg-white border border-slate-100 rounded-[32px] p-5 flex flex-col md:flex-row items-center gap-10 shadow-sm hover:shadow-md transition-all group"
                             >
@@ -163,11 +192,54 @@ export default function WishlistPage() {
                                 {/* Parallel Render Area */}
                                 <div className="w-full md:w-64 aspect-square bg-[#F8F9FA] rounded-[24px] border-2 border-dashed border-slate-200 overflow-hidden relative">
                                     {bulkResults[item.id] ? (
-                                        <div className="relative h-full w-full animate-in fade-in zoom-in-95 duration-700">
-                                            <img src={bulkResults[item.id]} className="w-full h-full object-cover" alt="Look Result" />
-                                            <a href={bulkResults[item.id]} download className="absolute bottom-4 right-4 bg-white/90 p-3 rounded-xl shadow-lg hover:scale-110 transition-transform">
-                                                <Download size={18} />
-                                            </a>
+                                        <div className="relative h-full w-full animate-in fade-in zoom-in-95 duration-700 group/image">
+                                            <img
+                                                src={bulkResults[item.id]}
+                                                className="w-full h-full object-cover cursor-zoom-in"
+                                                alt="Look Result"
+                                                onClick={() => setPreviewImage(bulkResults[item.id])}
+                                            />
+
+                                            {/* Overlay Actions */}
+                                            <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/image:opacity-100 gap-2">
+                                                <button
+                                                    onClick={() => setPreviewImage(bulkResults[item.id])}
+                                                    className="bg-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
+                                                    title="View Fullscreen"
+                                                >
+                                                    <Maximize2 size={18} />
+                                                </button>
+                                                <a
+                                                    href={bulkResults[item.id]}
+                                                    download
+                                                    className="bg-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
+                                                    title="Download"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Download size={18} />
+                                                </a>
+                                            </div>
+
+                                            {/* Regenerate Button (Bottom Center) - "Not satisfied?" */}
+                                            {progress[item.id] !== 'loading' && (
+                                                <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                                                    <button
+                                                        onClick={() => handleRegenerate(item)}
+                                                        className="bg-white/90 backdrop-blur-sm border border-slate-200 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 hover:bg-black hover:text-white transition-all transform hover:-translate-y-1"
+                                                    >
+                                                        <RotateCcw size={12} />
+                                                        <span className="text-[9px] font-bold uppercase tracking-widest">Retry Look</span>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Loading Overlay if regenerating */}
+                                            {progress[item.id] === 'loading' && (
+                                                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                                                    <Loader2 className="animate-spin text-black" size={24} />
+                                                    <span className="text-[8px] font-black uppercase tracking-widest mt-2">Refining...</span>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -203,6 +275,36 @@ export default function WishlistPage() {
             </main>
 
             <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} baseImage={baseImage} jewelryItem={activeAIItem} />
+
+            {/* Image Preview Modal */}
+            <AnimatePresence>
+                {previewImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.9 }}
+                            className="relative max-w-7xl w-full max-h-screen flex items-center justify-center p-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <img src={previewImage} alt="Full View" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full backdrop-blur-md transition-all"
+                            >
+                                <X size={24} />
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

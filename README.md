@@ -1,7 +1,5 @@
 # ✨ Taneria Jewels - Virtual Try-On Experience
 
-![Taneria Jewels Banner](https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2070&auto=format&fit=crop)
-
 **Taneria Jewels** is a cutting-edge virtual try-on application that bridges the gap between digital browsing and physical experience. enhance the online jewelry shopping experience. Built with **React** and powered by advanced AI services like **RunwayML** and **HeyGen**, this application allows users to realistically visualize jewelry on themselves or digital models.
 
 ---
@@ -53,7 +51,7 @@ Follow these steps to set up the project locally.
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/your-username/virtualtryon-master.git
+    git clone https://github.com/nandeshkanagaraju/virtualtryon-master.git
     cd virtualtryon-master
     ```
 
@@ -110,10 +108,4 @@ src/
 
 ---
 
-## 🤝 Contributing
 
-Contributions are always welcome! Please create a Pull Request or open an issue for any bugs or feature suggestions.
-
----
-
-Made with ❤️ by the Taneria Jewels Team

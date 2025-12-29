@@ -7,11 +7,14 @@ import AIModal from '../components/AIModal';
 import GenerativeCard from './GenerativeCard';
 import { performVirtualTryOn } from '../services/runwayService';
 
+import CameraCapture from './CameraCapture';
+
 export default function JewelryShowcase() {
     const [baseImage, setBaseImage] = useState(null);
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [activeAIItem, setActiveAIItem] = useState(null);
     const [isUploadPromptOpen, setIsUploadPromptOpen] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
     const [wishlist, setWishlist] = useState([]);
     const [filterMode, setFilterMode] = useState('all');
     const fileInputRef = useRef(null);
@@ -32,12 +35,18 @@ export default function JewelryShowcase() {
         setGeneratedResults(savedResults);
     }, []);
 
-    // TRIGGERS WHEN FILTER MODE OR BASE IMAGE CHANGES
+    // FILTER LOGIC - Moved up for scope access
+    const filteredCatalog = filterMode === 'all'
+        ? JEWELRY_CATALOG
+        : JEWELRY_CATALOG.filter(item => item.type === filterMode);
+
+    // TRIGGERS WHEN BASE IMAGE CHANGES (Only on upload/capture)
     useEffect(() => {
-        if (baseImage && filterMode !== 'all' && apiKey) {
+        if (baseImage) {
             triggerBatchGeneration();
         }
-    }, [filterMode, baseImage]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [baseImage]); // Remove filterMode to prevent auto-gen on tab switch
 
     const toggleWishlist = (id) => {
         let updatedWishlist = wishlist.includes(id)
@@ -69,9 +78,12 @@ export default function JewelryShowcase() {
             const reader = new FileReader();
             reader.onload = (event) => {
                 setBaseImage(event.target.result);
+                // Clear previous results for new identity
+                setGeneratedResults({});
+                setGenerationStatus({});
+                localStorage.removeItem('taneria_wishlist_results');
+
                 setIsUploadPromptOpen(false);
-                // We do NOT immediately open the single modal anymore if we want batch processing
-                // But we CAN if the user clicked "Try Now" on a specific item first.
                 if (activeAIItem) {
                     setIsAIModalOpen(true);
                 }
@@ -80,8 +92,28 @@ export default function JewelryShowcase() {
         }
     };
 
+    const handleCameraCapture = (imageDataUrl) => {
+        setBaseImage(imageDataUrl);
+        // Clear previous results for new identity
+        setGeneratedResults({});
+        setGenerationStatus({});
+        localStorage.removeItem('taneria_wishlist_results');
+
+        setShowCamera(false);
+        setIsUploadPromptOpen(false);
+
+        if (activeAIItem) {
+            setIsAIModalOpen(true);
+        }
+    };
+
     // --- BATCH GENERATION LOGIC ---
     const triggerBatchGeneration = async () => {
+        if (!apiKey) {
+            console.warn("Runway API Key missing. Skipping auto-generation.");
+            return;
+        }
+
         const itemsToProcess = filteredCatalog.filter(item =>
             !generatedResults[item.id] && // Not already generated
             (!generationStatus[item.id] || generationStatus[item.id] === 'error') // Not currently pending
@@ -141,10 +173,7 @@ export default function JewelryShowcase() {
     };
 
 
-    // FILTER LOGIC
-    const filteredCatalog = filterMode === 'all'
-        ? JEWELRY_CATALOG
-        : JEWELRY_CATALOG.filter(item => item.type === filterMode);
+
 
     return (
         <div className="relative w-full min-h-screen bg-[#FDFDFF] font-['Inter',sans-serif] text-slate-900 overflow-x-hidden">
@@ -163,11 +192,18 @@ export default function JewelryShowcase() {
                         {wishlist.length > 0 && <span className="ml-1 bg-black text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{wishlist.length}</span>}
                     </Link>
 
-                    {baseImage && (
+                    {baseImage ? (
                         <div className="flex items-center gap-3 bg-white border border-slate-200 p-1 pr-4 rounded-full shadow-sm">
                             <img src={baseImage} className="w-10 h-10 rounded-full object-cover border border-slate-100" alt="User" />
                             <button onClick={() => setBaseImage(null)} className="text-[10px] font-bold uppercase text-red-500 hover:underline">Change Photo</button>
                         </div>
+                    ) : (
+                        <button
+                            onClick={() => setIsUploadPromptOpen(true)}
+                            className="bg-black text-white px-5 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all text-[11px] font-bold uppercase tracking-widest flex items-center gap-2"
+                        >
+                            <Camera size={16} /> Upload / Camera
+                        </button>
                     )}
                 </div>
             </div>
@@ -249,7 +285,21 @@ export default function JewelryShowcase() {
 
             {/* Modals */}
             <AnimatePresence>
-                {isUploadPromptOpen && (
+                {showCamera && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200]"
+                    >
+                        <CameraCapture
+                            onCapture={handleCameraCapture}
+                            onClose={() => setShowCamera(false)}
+                        />
+                    </motion.div>
+                )}
+
+                {isUploadPromptOpen && !showCamera && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white border-2 border-black rounded-[40px] p-10 max-w-sm w-full text-center shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]">
                             <div className="w-20 h-20 bg-slate-50 border-2 border-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
@@ -260,7 +310,10 @@ export default function JewelryShowcase() {
                             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                             <div className="flex flex-col gap-3">
                                 <button onClick={() => fileInputRef.current.click()} className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                                    <Upload size={16} /> Choose Image
+                                    <Upload size={16} /> Upload Photo
+                                </button>
+                                <button onClick={() => setShowCamera(true)} className="w-full bg-white border-2 border-black text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+                                    <Camera size={16} /> Use Camera
                                 </button>
                                 <button onClick={() => setIsUploadPromptOpen(false)} className="w-full py-4 text-[10px] font-black uppercase text-slate-400 hover:text-black">Maybe later</button>
                             </div>

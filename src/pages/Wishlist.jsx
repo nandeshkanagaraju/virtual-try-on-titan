@@ -4,6 +4,7 @@ import { Trash2, ArrowRight, HeartOff, Sparkles, Loader2, Download, LayoutGrid, 
 import { JEWELRY_CATALOG } from '../data/catalog';
 import { performVirtualTryOn } from '../services/runwayService.js';
 import AIModal from '../components/AIModal';
+import CameraCapture from '../components/CameraCapture';
 import Header from '../components/Header';
 
 export default function WishlistPage() {
@@ -11,6 +12,7 @@ export default function WishlistPage() {
     const [baseImage, setBaseImage] = useState(null);
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [activeAIItem, setActiveAIItem] = useState(null);
+    const [showCamera, setShowCamera] = useState(false);
     const fileInputRef = useRef(null);
 
     // Bulk processing states
@@ -46,6 +48,12 @@ export default function WishlistPage() {
             };
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleCameraCapture = (imageDataUrl) => {
+        setBaseImage(imageDataUrl);
+        localStorage.setItem('user_portrait', imageDataUrl);
+        setShowCamera(false);
     };
 
     const removePortrait = () => {
@@ -89,13 +97,12 @@ export default function WishlistPage() {
     };
 
     const handleRegenerate = async (item) => {
-        if (!baseImage) return;
+        if (!baseImage) {
+            alert("Please upload or capture a photo first to retry the look.");
+            return;
+        }
 
         setProgress(prev => ({ ...prev, [item.id]: 'loading' }));
-
-        // Clear existing result temporarily to show loading state if desired, 
-        // or just keep showing it with a loading spinner overlay.
-        // Let's keep showing it but overlay spinner.
 
         try {
             const url = await performVirtualTryOn(baseImage, item, apiKey);
@@ -104,6 +111,7 @@ export default function WishlistPage() {
             localStorage.setItem('taneria_wishlist_results', JSON.stringify(newResults));
             setProgress(prev => ({ ...prev, [item.id]: 'done' }));
         } catch (err) {
+            console.error("Regeneration error:", err);
             setProgress(prev => ({ ...prev, [item.id]: 'error' }));
             alert("Generation failed. Please try again.");
         }
@@ -138,9 +146,15 @@ export default function WishlistPage() {
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                         <button
                             onClick={() => fileInputRef.current.click()}
-                            className="bg-black text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg"
+                            className="bg-black text-white px-5 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-md"
                         >
-                            <Camera size={16} /> {baseImage ? "Update Photo" : "Upload Portrait"}
+                            <User size={14} /> Upload
+                        </button>
+                        <button
+                            onClick={() => setShowCamera(true)}
+                            className="bg-white border text-black border-slate-200 px-5 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                            <Camera size={14} /> Camera
                         </button>
                         {baseImage && (
                             <button onClick={removePortrait} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
@@ -149,6 +163,17 @@ export default function WishlistPage() {
                         )}
                     </div>
                 </section>
+
+                <AnimatePresence>
+                    {showCamera && (
+                        <div className="fixed inset-0 z-[200]">
+                            <CameraCapture
+                                onCapture={handleCameraCapture}
+                                onClose={() => setShowCamera(false)}
+                            />
+                        </div>
+                    )}
+                </AnimatePresence>
 
                 {/* 2. WISHLIST HEADER */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 border-b border-slate-100 pb-10">

@@ -24,7 +24,8 @@ export const JEWELRY_CATALOG = [
 export const EYEWEAR_CATALOG = [
     { id: 301, name: "Purple Square Sunglasses for Women", type: "eyewear", src: "/images/womenglass1.png" },
     { id: 302, name: "Brown Navigator Sunglasses for Men", type: "eyewear", src: "/images/glassmen1.png" },
-    { id: 302, name: "Blue glasses for Men", type: "eyewear", src: "/images/eyeblue.webp" },{ id: 302, name: "Green frame for Men", type: "eyewear", src: "/images/eyegreen.webp" },
+    { id: 303, name: "Blue glasses for Men", type: "eyewear", src: "/images/eyeblue.webp" },
+    { id: 304, name: "Green frame for Men", type: "eyewear", src: "/images/eyegreen.webp" },
 ];
 
 export const APPAREL_CATALOG = [

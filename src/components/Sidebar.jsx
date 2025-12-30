@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, X, User, Upload, ArrowRight, Heart, Filter, Sparkles, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { JEWELRY_CATALOG } from '../data/catalog';
+import { JEWELRY_CATALOG, EYEWEAR_CATALOG, APPAREL_CATALOG } from '../data/catalog';
 import AIModal from '../components/AIModal';
 import GenerativeCard from './GenerativeCard';
 import { performVirtualTryOn } from '../services/runwayService';
 
 import CameraCapture from './CameraCapture';
 
-export default function JewelryShowcase() {
+export default function Sidebar({ mode = 'jewelry', ...props }) {
     const [baseImage, setBaseImage] = useState(null);
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [activeAIItem, setActiveAIItem] = useState(null);
@@ -35,10 +35,41 @@ export default function JewelryShowcase() {
         setGeneratedResults(savedResults);
     }, []);
 
-    // FILTER LOGIC - Moved up for scope access
+    // --- MODE CONFIGURATION ---
+    const getModeConfig = () => {
+        switch (mode) {
+            case 'eyewear':
+                return {
+                    catalog: EYEWEAR_CATALOG,
+                    title: "Eyewear Gallery",
+                    filters: [{ id: 'all', label: 'All Eyewear' }]
+                };
+            case 'apparel':
+                return {
+                    catalog: APPAREL_CATALOG,
+                    title: "Apparel Gallery",
+                    filters: [{ id: 'all', label: 'All Apparel' }]
+                };
+            case 'jewelry':
+            default:
+                return {
+                    catalog: JEWELRY_CATALOG,
+                    title: "Jewelry Gallery",
+                    filters: [
+                        { id: 'all', label: 'All Collection' },
+                        { id: 'necklace', label: 'Necklaces' },
+                        { id: 'earring', label: 'Earrings' },
+                    ]
+                };
+        }
+    };
+
+    const { catalog, title, filters } = getModeConfig();
+
+    // FILTER LOGIC
     const filteredCatalog = filterMode === 'all'
-        ? JEWELRY_CATALOG
-        : JEWELRY_CATALOG.filter(item => item.type === filterMode);
+        ? catalog
+        : catalog.filter(item => item.type === filterMode);
 
     // TRIGGERS WHEN BASE IMAGE CHANGES (Only on upload/capture)
     useEffect(() => {
@@ -182,7 +213,7 @@ export default function JewelryShowcase() {
             <div className="max-w-7xl mx-auto px-8 pt-16 pb-12 flex justify-between items-end border-b border-slate-100">
                 <div className="flex flex-col">
                     <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 mb-2">Exclusive</h2>
-                    <h1 className="text-4xl font-bold tracking-tight">Jewelery Gallery</h1>
+                    <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -218,11 +249,7 @@ export default function JewelryShowcase() {
                     </div>
 
                     <nav className="flex flex-col gap-2">
-                        {[
-                            { id: 'all', label: 'All Collection' },
-                            { id: 'necklace', label: 'Necklaces' },
-                            { id: 'earring', label: 'Earrings' },
-                        ].map((btn) => (
+                        {filters.map((btn) => (
                             <button
                                 key={btn.id}
                                 onClick={() => setFilterMode(btn.id)}
@@ -239,7 +266,7 @@ export default function JewelryShowcase() {
                     <div className="mt-12 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
                         <Sparkles size={16} className="text-yellow-600 mb-2" />
                         <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed tracking-wider">
-                            Select a specific category (e.g. Necklaces) and upload a photo to auto-generate try-ons for the entire collection.
+                            Select a category and upload a photo to auto-generate try-ons for the entire collection.
                         </p>
                     </div>
                 </aside>

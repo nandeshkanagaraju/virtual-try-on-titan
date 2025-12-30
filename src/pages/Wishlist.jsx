@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, ArrowRight, HeartOff, Sparkles, Loader2, Download, LayoutGrid, Camera, User, X, RotateCcw, Maximize2 } from 'lucide-react';
-import { JEWELRY_CATALOG } from '../data/catalog';
+import { JEWELRY_CATALOG, EYEWEAR_CATALOG, APPAREL_CATALOG } from '../data/catalog';
 import { performVirtualTryOn } from '../services/runwayService.js';
 import AIModal from '../components/AIModal';
 import CameraCapture from '../components/CameraCapture';
@@ -22,10 +22,13 @@ export default function WishlistPage() {
 
     const apiKey = import.meta.env.VITE_RUNWAY_API_KEY;
 
+    // Combine all catalogs to find items by ID
+    const ALL_ITEMS = [...JEWELRY_CATALOG, ...EYEWEAR_CATALOG, ...APPAREL_CATALOG];
+
     useEffect(() => {
         // Load Wishlist
         const savedIds = JSON.parse(localStorage.getItem('taneria_wishlist') || '[]');
-        const items = JEWELRY_CATALOG.filter(item => savedIds.includes(item.id));
+        const items = ALL_ITEMS.filter(item => savedIds.includes(item.id));
         setWishlistItems(items);
 
         // Load Portrait from local storage
